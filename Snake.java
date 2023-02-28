@@ -6,6 +6,10 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.util.Duration;
 import java.util.ArrayList;
 import java.util.Random;
@@ -15,7 +19,7 @@ import java.util.TimerTask;
 public class Snake extends BorderPane
 {
     private Pane Fon;
-    private Rectangle rectanglee;
+    private Rectangle Head;
     private Rectangle tail;
     private Circle circle;
     private TranslateTransition TraRi;
@@ -35,21 +39,23 @@ public class Snake extends BorderPane
 
     public Snake()
     {
+        //we need Arraylist of rectangles to store information about all peices of snakes tail
         rect = new ArrayList<Rectangle>();
         Tra = new TranslateTransition();
 
-        //making a head of a snake
-        rectanglee =new Rectangle();
-        rectanglee.setWidth(50);
-        rectanglee.setHeight(50);
-        rectanglee.setX(400);
-        rectanglee.setY(400);
-        rectanglee.setFill(Color.web("#562C2C"));
+        //making a head of the snake
+        Head =new Rectangle();
+        Head.setWidth(50);
+        Head.setHeight(50);
+        Head.setX(400);
+        Head.setY(400);
+        Head.setFill(Color.web("#562C2C"));
 
 
         Fon = new Pane();
         setCenter(Fon);
 
+        //making chess pattern for the background
         for (int i = 1; i < 50; i++) {
             for (int j = 0; j < 50; j++) {
                 Rectangle backGround = new Rectangle();
@@ -65,100 +71,111 @@ public class Snake extends BorderPane
             }
         }
 
-        Fon.getChildren().add(rectanglee);
+        //adding head to the Pane
+        Fon.getChildren().add(Head);
 
         Fon.setStyle("-fx-background-color: #329F5B;");
 
+        //adding First apple to the field
         Apples();
 
         Timer timer = new java.util.Timer();
         timer.schedule(new TimerTask() {
             public void run() {
                 //using runLater, so all tasks are done in one thread
-                //System.out.println(score);
-                System.out.println(getHeight()+" " +getWidth());
-
+                //without runLater code will not work because JavaFx doesn't work with multithreading
                 Platform.runLater(new Runnable() {
                     public void run() {
-                        traceX.add((rectanglee.getBoundsInParent().getMinX()));
-                        traceY.add((rectanglee.getBoundsInParent().getMinY()));
-                        if(rectanglee.getBoundsInParent().getMaxX()>circle.getCenterX()-13 && rectanglee.getBoundsInParent().getMinX()<circle.getCenterX()+13)
+                        traceX.add((Head.getBoundsInParent().getMinX()));
+                        traceY.add((Head.getBoundsInParent().getMinY()));
+
+                        //detecting if the head of the snake touched an apple
+                        if(Head.getBoundsInParent().getMaxX()>circle.getCenterX()-13 && Head.getBoundsInParent().getMinX()<circle.getCenterX()+13)
                         {
-                            if (rectanglee.getBoundsInParent().getMaxY()>circle.getCenterY()-13 && rectanglee.getBoundsInParent().getMinY()<circle.getCenterY()+13)
+                            if (Head.getBoundsInParent().getMaxY()>circle.getCenterY()-13 && Head.getBoundsInParent().getMinY()<circle.getCenterY()+13)
                             {
                                 Fon.getChildren().remove(circle);
                                 score++;
                                 Apples();
-                                tail(rectanglee.getBoundsInParent().getMaxX(), rectanglee.getBoundsInParent().getMaxY());
+                                tail(Head.getBoundsInParent().getMaxX(), Head.getBoundsInParent().getMaxY());
 
 
 
                             }
                         }
+
+                        //the code below is needed for making an invisible borders for snake
+                        //borders of a game can be changed just by changing the size of a window of the app
+
+                        //when the code is just launched, the first seconds, it reads borders of a window as zero
+                        //this piece of code is needed to prevent this problem
                         if (getWidth() == 0.0){
                             Width = 1000;
                             Height = 800;
                         }
+
                         else
                         {
+                            //reading the width and length of a window
                             Width = (int)getWidth();
                             Height = (int)getHeight();
                         }
-                        if(rectanglee.getBoundsInParent().getMaxX() > Width+2 || rectanglee.getBoundsInParent().getMinX() < -2 || rectanglee.getBoundsInParent().getMaxY() > Height +2 || rectanglee.getBoundsInParent().getMinY() < -2)
+
+                        //if snakes head touches borders of a window the game ends
+                        if(Head.getBoundsInParent().getMaxX() > Width+2 || Head.getBoundsInParent().getMinX() < -2 || Head.getBoundsInParent().getMaxY() > Height +2 || Head.getBoundsInParent().getMinY() < -2)
                         {
-                            try {
-                                Thread.sleep(100000000);
-                            }
-                            catch (InterruptedException ex)
-                            {
+                                GameOver();
 
-                            }
-
+                                //setting the background color of a pane to red to indicate end of a game
+                                Fon.setStyle("-fx-background-color: #AA4A44;");
                         }
 
+                        //this piece of code deletes all recordings of a snakes trail, if a snake doesnt have a tail yet
                         if (rect.isEmpty())
                         {
                             traceX.remove(0);
                             traceY.remove(0);
                         }
+
+
+                        // if snake has a tail, tail will follow the trace of head from the moment of creating a tail block
                         if(!rect.isEmpty()) {
                             for (int i = 0; i < rect.size(); i++) {
                                 Rectangle Tail = new Rectangle();
                                 Tail = rect.get(i);
-                                //здесь находится самый главный код для хвоста
+
+
+                                //each new block of tail moves with bigger latency
                                     Tail.setX(traceX.get(SecondThread - i * 12 ));
                                     Tail.setY(traceY.get(SecondThread - i * 12 ));
                             }
+
+                            //secondthread counts how many times does the the function run() repeated actions, from the moment snake got its tail
                             SecondThread++;
                         }
 
+
                         int Tailsize = rect.size();
+
+                        //this function checks if snakes head touched the tail
                         if(!rect.isEmpty())
                         {
+                            //for i loop starts from 3, in order to prevent sudden gameovers, because the first 3 or 4 peices of tail
+                            //can touch the head
                             for (int i = 3; i < Tailsize; i++)
                             {
                                 Rectangle Tail = new Rectangle();
                                 Tail = rect.get(i);
                                 double TailCenterX = Tail.getX()+25;// tail center coordinate X
                                 double TailCenterY = Tail.getY()+25;// tail center coordinate X
-                                if(rectanglee.getBoundsInParent().getMaxX()>TailCenterX-15 && rectanglee.getBoundsInParent().getMinX()<TailCenterX+15)
+                                if(Head.getBoundsInParent().getMaxX()>TailCenterX-15 && Head.getBoundsInParent().getMinX()<TailCenterX+15)
                                 {
-                                    if (rectanglee.getBoundsInParent().getMaxY()>TailCenterY-15 && rectanglee.getBoundsInParent().getMinY()<TailCenterY+15
+                                    if (Head.getBoundsInParent().getMaxY()>TailCenterY-15 && Head.getBoundsInParent().getMinY()<TailCenterY+15
                                     )
                                     {
-                                        try {
                                             System.out.println(TailCenterX + " " + TailCenterY);
-                                            System.out.println(rectanglee.getBoundsInParent().getMaxX() + " " +rectanglee.getBoundsInParent().getMinY());
-                                            Thread.sleep(100000000);
-                                        }
-                                        catch (InterruptedException ex)
-                                        {
-
-                                        }
-
-
-
-
+                                            System.out.println(Head.getBoundsInParent().getMaxX() + " " +Head.getBoundsInParent().getMinY());
+                                            GameOver();
                                     }
                                 }
                             }
@@ -175,6 +192,8 @@ public class Snake extends BorderPane
 
     public void Apples()
     {
+        //creating an apple and placing it on random coordinates
+        //within the borders of the window
         circle = new Circle();
         Random random = new Random();
         double paneWidth = getWidth();
@@ -200,10 +219,11 @@ public class Snake extends BorderPane
 
     public void goDown()
     {
+        // writing on which axis does the snake moves
         axisX = false;
         axisY = true;
         TranslateTransition TraDo = new TranslateTransition();
-        TraDo.setNode(rectanglee);
+        TraDo.setNode(Head);
         TraDo.setDuration(Duration.millis(0));
         //animation will be at a constant speed
         TraDo.setInterpolator(Interpolator.LINEAR);
@@ -217,10 +237,11 @@ public class Snake extends BorderPane
 
     public void goRight()
     {
+        // writing on which axis does the snake moves
         axisX = true;
         axisY = false;
         TranslateTransition TraRi = new TranslateTransition();
-        TraRi.setNode(rectanglee);
+        TraRi.setNode(Head);
         TraRi.setDuration(Duration.millis(0));
         //this block is needed so the previous animation will stop
 
@@ -235,10 +256,11 @@ public class Snake extends BorderPane
 
     public void goUp()
     {
+         // writing on which axis does the snake moves
         axisX = false;
         axisY = true;
         TranslateTransition TraUp = new TranslateTransition();
-        TraUp.setNode(rectanglee);
+        TraUp.setNode(Head);
         TraUp.setDuration(Duration.millis(0));
         //animation will be at a constant speed
         TraUp.setInterpolator(Interpolator.LINEAR);
@@ -252,10 +274,12 @@ public class Snake extends BorderPane
 
     public void goLeft()
     {
+        // writing on which axis does the snake moves
         axisX = true;
         axisY = false;
+
         TranslateTransition TraLe = new TranslateTransition();
-        TraLe.setNode(rectanglee);
+        TraLe.setNode(Head);
         TraLe.setDuration(Duration.millis(0));
         //animation will be at a constant speed
         TraLe.setInterpolator(Interpolator.LINEAR);
@@ -267,6 +291,7 @@ public class Snake extends BorderPane
         TraLe.play();
     }
 
+    // tail class which creates a tail for a snake
     public void tail(double x, double y)
     {
         tail = new Rectangle();
@@ -280,17 +305,18 @@ public class Snake extends BorderPane
         Tra.setNode(tail);
     }
 
-
+//accessor for the AxisX
   public boolean AxisX()
   {
       return axisX;
   }
-
+//accessor for the AxisY
   public boolean AxisY()
   {
       return axisY;
   }
-
+//returns 0 if snake dosnt have a tail
+// and 1 if it has a tail
   public int TailEmpty()
   {
       if (rect.isEmpty())
@@ -299,6 +325,18 @@ public class Snake extends BorderPane
           return 1;
   }
 
+//GameOver class, which is clearing the pane, and shows "GameOver" message
+//called when snake hit border or itself
+public void GameOver()
+{
+    Fon.getChildren().clear();
+    Text gameover = new Text("Game Over");
+    gameover.setFill(Color.WHITE);
+    gameover.setFont(Font.font("verdana", FontWeight.BOLD, FontPosture.REGULAR, 60));
+    Fon.getChildren().add(gameover);
+    this.setStyle("-fx-background-color: #AA4A44;");
+    setCenter(gameover);
+}
 
 
 
